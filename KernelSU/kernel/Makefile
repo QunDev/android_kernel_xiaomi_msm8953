@@ -26,7 +26,7 @@ $(info -- KernelSU version: $(KSU_VERSION))
 ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
 else # If there is no .git file, the default version will be passed.
 $(warning "KSU_GIT_VERSION not defined! Using pinned tissot version.")
-ccflags-y += -DKSU_VERSION=11648
+ccflags-y += -DKSU_VERSION=12018
 endif
 
 ifndef KSU_EXPECTED_SIZE
