@@ -5086,3 +5086,11 @@ CONFIG_ARCH_HAS_SG_CHAIN=y
 CONFIG_SBITMAP=y
 CONFIG_QMI_ENCDEC=y
 # CONFIG_QMI_ENCDEC_DEBUG is not set
+
+# SukiSU-Ultra (KernelSU) — manual-hook root for non-GKI 4.9.
+# KPROBES intentionally left disabled (see CONFIG_KPROBES above) — manual hooks
+# only, which also avoids accidental Safe Mode entry.
+# SUSFS is deliberately OFF for now (Phase A); it defaults to y but requires the
+# susfs4ksu kernel-4.9 patch which is not applied yet. Enable in Phase B.
+CONFIG_KSU=y
+# CONFIG_KSU_SUSFS is not set
