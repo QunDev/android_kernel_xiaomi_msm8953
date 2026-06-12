@@ -67,9 +67,10 @@ MDIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 # Vendored from ciroprogamer/KERNELSU-YSL @ ksu-next-susfs (KernelSU-Next fork,
 # SUSFS v2.1.0 NON-GKI). Hardcode the version so the AOSP build does not shell
 # out to git (upstream ran `git fetch --unshallow` + rev-list at build time,
-# which is non-reproducible and wrong for a vendored copy). 33084 is upstream's
-# own fallback; pin the matching KernelSU-Next manager (com.rifsxd.ksunext).
-KSU_VERSION := 33084
+# which is non-reproducible and wrong for a vendored copy). The installed
+# com.rifsxd.ksunext manager rejects kernels below 33110 ("version too low"),
+# so pin to 33110 (the manager's minimum) to satisfy the version handshake.
+KSU_VERSION := 33110
 $(info -- KernelSU-Next version (tissot pinned): $(KSU_VERSION))
 ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
 ccflags-y += -DKSU_VERSION_TAG=\"v3.1.0-legacy-susfs-tissot\"
