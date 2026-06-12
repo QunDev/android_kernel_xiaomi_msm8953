@@ -5087,10 +5087,25 @@ CONFIG_SBITMAP=y
 CONFIG_QMI_ENCDEC=y
 # CONFIG_QMI_ENCDEC_DEBUG is not set
 
-# SukiSU-Ultra (KernelSU) — manual-hook root for non-GKI 4.9.
-# KPROBES intentionally left disabled (see CONFIG_KPROBES above) — manual hooks
-# only, which also avoids accidental Safe Mode entry.
-# SUSFS is deliberately OFF for now (Phase A); it defaults to y but requires the
-# susfs4ksu kernel-4.9 patch which is not applied yet. Enable in Phase B.
+# KernelSU-Next (replaces SukiSU) — manual-hook root + SUSFS v2.1.0 for non-GKI 4.9.
+# KPROBES stays disabled (see CONFIG_KPROBES above): manual hooks only, which also
+# avoids accidental Safe Mode entry. SUSFS hides root/mounts from app detection.
 CONFIG_KSU=y
-# CONFIG_KSU_SUSFS is not set
+CONFIG_KSU_MANUAL_HOOK=y
+CONFIG_KSU_SUSFS=y
+CONFIG_KSU_SUSFS_SUS_PATH=y
+# SUS_MOUNT rewrites the mount-namespace allocator in fs/namespace.c (KSU
+# unshared-mnt infra) — high bootloop risk and structurally divergent from this
+# CAF 4.9 base. Left off for now; core hiding (sus_path/kstat/uname/cmdline/
+# open_redirect/try_umount) covers app detection. Revisit as a follow-up.
+# CONFIG_KSU_SUSFS_SUS_MOUNT is not set
+CONFIG_KSU_SUSFS_SUS_KSTAT=y
+CONFIG_KSU_SUSFS_TRY_UMOUNT=y
+CONFIG_KSU_SUSFS_SPOOF_UNAME=y
+CONFIG_KSU_SUSFS_ENABLE_LOG=y
+CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
+CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
+CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
+# SUS_MAP needs the structurally-divergent fs/proc/task_mmu.c maps-spoofing hunk
+# (donor base differs from this CAF 4.9 tree); left off — core hiding does not need it.
+# CONFIG_KSU_SUSFS_SUS_MAP is not set
