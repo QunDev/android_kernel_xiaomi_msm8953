@@ -20,12 +20,15 @@ endif
 REPO_NAME   := SukiSU-Ultra
 
 # --- tissot: version pinned at vendoring time ---------------------------------
-# Vendored from SukiSU-Ultra 'builtin' branch @ 6c13a069 (main commit count 3616).
-# KSU_VERSION = VERSION_BASE(40000) + 3616 - VERSION_OFFSET(2815) = 40801.
+# Vendored from SukiSU-Ultra 'builtin' branch @ 6c13a069. The reported version is
+# an integer label = VERSION_BASE(40000) + <main commit count> - VERSION_OFFSET(2815),
+# decoupled from the builtin kernel code. Pinned to 40796 to MATCH the installed
+# SukiSU manager APK (built when main was at 3611 commits) — the manager warns on
+# any manager!=driver version mismatch, even though the protocol is compatible.
 # Hardcoded so the AOSP kernel build does not shell out to git/curl (the upstream
 # Makefile fetched --unshallow and hit the GitHub API at build time, which breaks
 # offline/reproducible builds and computes wrong values for a vendored copy).
-KSU_VERSION      := 40801
+KSU_VERSION      := 40796
 KSU_VERSION_FULL := v4.1.3-6c13a069-builtin@tissot
 $(info -- $(REPO_NAME) version: $(KSU_VERSION) [$(KSU_VERSION_FULL)])
 
