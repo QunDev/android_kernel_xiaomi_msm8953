@@ -137,4 +137,19 @@ struct bpf_security_struct {
 
 extern unsigned int selinux_checkreqprot;
 
+#ifdef CONFIG_KSU
+/* tissot/KernelSU-Next: 4.9 lacks these accessors (added upstream ~4.19).
+ * The KSU driver calls selinux_cred()/selinux_inode(); provide them here so
+ * the driver links without the build-time sed rewrites in drivers/kernelsu/Kbuild. */
+static inline struct task_security_struct *selinux_cred(const struct cred *cred)
+{
+	return cred->security;
+}
+
+static inline struct inode_security_struct *selinux_inode(const struct inode *inode)
+{
+	return inode->i_security;
+}
+#endif /* CONFIG_KSU */
+
 #endif /* _SELINUX_OBJSEC_H_ */

@@ -10,6 +10,9 @@
 
 #include <linux/thread_info.h>
 #include <asm/seccomp.h>
+#ifdef CONFIG_KSU
+#include <linux/atomic.h>
+#endif
 
 struct seccomp_filter;
 /**
@@ -25,6 +28,9 @@ struct seccomp_filter;
  */
 struct seccomp {
 	int mode;
+#ifdef CONFIG_KSU
+	atomic_t filter_count;
+#endif
 	struct seccomp_filter *filter;
 };
 
