@@ -4,6 +4,14 @@ SUBLEVEL = 227
 EXTRAVERSION =
 NAME = Roaring Lionus
 
+# tissot: pin a stock-looking build identity so uname / /proc/version do not
+# leak self-build tells (live date, builder host/user). Combined with an empty
+# .scmversion (kills the "+" dirty suffix), this makes the kernel string look
+# like a clean release build — no susfs set_uname needed.
+export KBUILD_BUILD_TIMESTAMP := Fri Mar 15 00:00:00 UTC 2024
+export KBUILD_BUILD_USER := nobody
+export KBUILD_BUILD_HOST := android-build
+
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"
 # More info can be located in ./README
