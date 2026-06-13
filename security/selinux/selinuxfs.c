@@ -806,6 +806,25 @@ static ssize_t sel_write_access(struct file *file, char *buf, size_t size)
 	if (sscanf(buf, "%s %s %hu", scon, tcon, &tclass) != 3)
 		goto out;
 
+#ifdef CONFIG_KSU
+	/*
+	 * tissot: hide KSU's SELinux footprint from app-domain access-query probes
+	 * (/sys/fs/selinux/access -> security_compute_av_user). For app UIDs:
+	 *  - if either context is a KSU/su/magisk context, report it as invalid
+	 *    (-EINVAL) like stock where that type does not exist;
+	 *  - strip the permissive flag from the result so the "DirtySepolicy"
+	 *    permissive-domain signature is not observable.
+	 * This is the query node only; real enforcement (avc_has_perm) is untouched.
+	 */
+	if (from_kuid(&init_user_ns, current_uid()) >= 10000 &&
+	    (strnstr(scon, ":ksu", size) || strnstr(scon, "magisk", size) ||
+	     strnstr(scon, "u:r:su:", size) || strnstr(tcon, ":ksu", size) ||
+	     strnstr(tcon, "magisk", size) || strnstr(tcon, "u:r:su:", size))) {
+		length = -EINVAL;
+		goto out;
+	}
+#endif
+
 	length = security_context_str_to_sid(scon, &ssid, GFP_KERNEL);
 	if (length)
 		goto out;
@@ -815,6 +834,11 @@ static ssize_t sel_write_access(struct file *file, char *buf, size_t size)
 		goto out;
 
 	security_compute_av_user(ssid, tsid, tclass, &avd);
+
+#ifdef CONFIG_KSU
+	if (from_kuid(&init_user_ns, current_uid()) >= 10000)
+		avd.flags &= ~AVD_FLAGS_PERMISSIVE;
+#endif
 
 	length = scnprintf(buf, SIMPLE_TRANSACTION_LIMIT,
 			  "%x %x %x %x %u %x",

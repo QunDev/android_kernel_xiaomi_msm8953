@@ -5918,6 +5918,23 @@ static int selinux_setprocattr(struct task_struct *p,
 	if (error)
 		return error;
 
+#ifdef CONFIG_KSU
+	/*
+	 * tissot: make an app (uid>=10000) writing a KSU/root context to
+	 * /proc/self/attr/* fail with -EINVAL, exactly like a stock device where
+	 * that context's type does not exist. Root-detector apps probe attr/current
+	 * write outcomes to tell "context unknown" (stock, -EINVAL) apart from
+	 * "context exists, transition denied" (rooted, -EACCES). System/root
+	 * (uid<10000, incl KSU's escalated uid-0 processes) keep real behavior.
+	 */
+	if (size && value &&
+	    from_kuid(&init_user_ns, current_uid()) >= 10000 &&
+	    (strnstr((char *)value, ":ksu", size) ||
+	     strnstr((char *)value, "magisk", size) ||
+	     strnstr((char *)value, "u:r:su:", size)))
+		return -EINVAL;
+#endif
+
 	/* Obtain a SID for the context, if one was specified. */
 	if (size && str[0] && str[0] != '\n') {
 		if (str[size-1] == '\n') {
