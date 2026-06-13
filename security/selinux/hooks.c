@@ -2320,6 +2320,27 @@ static int check_nnp_nosuid(const struct linux_binprm *bprm,
 	 */
 	rc = security_bounded_transition(old_tsec->sid, new_tsec->sid);
 	if (rc) {
+#ifdef CONFIG_KSU
+		/*
+		 * tissot/KernelSU-Next: at boot, init execs `/data/adb/ksud`
+		 * under NO_NEW_PRIVS to enter the all-powerful permissive `ksu`
+		 * domain (injected `exec u:r:ksu:s0 root -- /data/adb/ksud ...`
+		 * directives in init.rc). The ksu domain has MORE permissions
+		 * than init, so it can never be a bounded transition target and
+		 * security_bounded_transition() always denies it — which means
+		 * ksud never runs, so NO post-fs-data/service.d scripts execute
+		 * and the su allowlist is not loaded at boot (su only works after
+		 * the manager app is opened). KernelSU-Next ships is_ksu_transition()
+		 * exactly for kernels <= 4.19 to be called here; the manual hook
+		 * integration omitted the call. Permit ONLY the init -> ksu
+		 * transition (it checks old==u:r:init:s0 && new==ksu sid).
+		 */
+		extern bool is_ksu_transition(
+			const struct task_security_struct *old_tsec,
+			const struct task_security_struct *new_tsec);
+		if (is_ksu_transition(old_tsec, new_tsec))
+			return 0;
+#endif
 		/*
 		 * On failure, preserve the errno values for NNP vs nosuid.
 		 * NNP:  Operation not permitted for caller.
