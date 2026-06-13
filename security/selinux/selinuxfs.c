@@ -563,6 +563,24 @@ static ssize_t sel_write_context(struct file *file, char *buf, size_t size)
 	if (length)
 		goto out;
 
+#ifdef CONFIG_KSU
+	/*
+	 * tissot: hide KSU/root SELinux contexts from app-domain probes.
+	 * Root-detector apps test context validity via /sys/fs/selinux/context
+	 * (libselinux security_check_context). For app UIDs (>=10000) report the
+	 * KSU/su/magisk contexts as invalid (-EINVAL) exactly like a stock device
+	 * where those types don't exist. System/root (uid<10000) get the real
+	 * result, and this is a query-only path so SELinux enforcement is untouched.
+	 */
+	if (from_kuid(&init_user_ns, current_uid()) >= 10000 &&
+	    (strnstr(buf, ":ksu", size) ||
+	     strnstr(buf, "magisk", size) ||
+	     strnstr(buf, "u:r:su:", size))) {
+		length = -EINVAL;
+		goto out;
+	}
+#endif
+
 	length = security_context_to_sid(buf, size, &sid, GFP_KERNEL);
 	if (length)
 		goto out;
