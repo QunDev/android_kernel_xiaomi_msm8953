@@ -263,6 +263,8 @@ static DEFINE_MUTEX(throne_tracker_mutex);
 
 static bool do_track_throne_core(bool prune_only)
 {
+	bool manager_search_failed = false;
+
 	if (is_lock_held(SYSTEM_PACKAGES_LIST_PATH)) {
 		return false; // The file is blocked by Android, we ask for a retry
 	}
@@ -344,6 +346,14 @@ static bool do_track_throne_core(bool prune_only)
 		pr_info("Searching manager...\n");
 		search_manager("/data/app", 2, &uid_list);
 		pr_info("Search manager finished\n");
+		// tissot: the manager apk can be listed in packages.list but not
+		// yet openable during early-boot dexopt, so search_manager fails
+		// to verify it (dmesg: "open .../base.apk error"). Flag it so the
+		// caller retries once the apk is readable, instead of caching
+		// "no manager" until the next package event (which may never
+		// come) -> manager shows "Unsupported | Not integrated".
+		if (!ksu_is_manager_appid_valid())
+			manager_search_failed = true;
 	}
 
 prune:
@@ -356,7 +366,7 @@ out:
 		kfree(np);
 	}
 
-	return true; // success
+	return !manager_search_failed; // false -> caller reschedules a retry
 }
 
 // kworker
@@ -375,14 +385,20 @@ static void ksu_throne_work_fn(struct work_struct *work)
 	revert_creds(saved_cred);
 	mutex_unlock(&throne_tracker_mutex);
 
-	if (!success && data->retries < 10) {
+	if (!success && data->retries < 90) {
+		unsigned long delay_ms;
 		data->retries++;
-		pr_info("throne_tracker: retrying (%d/10) in 100ms...\n", data->retries);
-		// Reschedule exactly this work instance
-		schedule_delayed_work(&data->dwork, msecs_to_jiffies(100));
+		// First retries are fast (packages.list still settling); then
+		// back off to 1s to patiently cover early-boot dexopt that makes
+		// the manager apk briefly unopenable (tens of seconds on a fresh
+		// flash). Stops as soon as the manager is crowned.
+		delay_ms = (data->retries <= 10) ? 100 : 1000;
+		pr_info("throne_tracker: retrying (%d/90) in %lums...\n",
+			data->retries, delay_ms);
+		schedule_delayed_work(&data->dwork, msecs_to_jiffies(delay_ms));
 	} else {
 		if (!success) {
-			pr_warn("throne_tracker: giving up after 10 retries.\n");
+			pr_warn("throne_tracker: giving up after 90 retries.\n");
 		}
 		data->retries = 0; // Resets for future triggers
 	}
@@ -397,12 +413,18 @@ void track_throne(bool prune_only)
 		mutex_lock(&throne_tracker_mutex);
 		
 		const struct cred *saved_cred = override_creds(ksu_cred);
-		do_track_throne_core(prune_only);
+		bool ok_first = do_track_throne_core(prune_only);
 		revert_creds(saved_cred);
 		
 		mutex_unlock(&throne_tracker_mutex);
 		throne_tracker_first_run = false;
-		return;
+		if (ok_first)
+			return;
+		// tissot: the synchronous first scan ran before the manager apk
+		// was readable (early-boot dexopt). Fall through to the async
+		// retry path below so we keep re-scanning until it is crowned,
+		// instead of leaving the manager unrecognized until next boot.
+		pr_info("throne_tracker: first run incomplete, scheduling retries\n");
 	}
 
 	// For asynchronous runs, if a work is already pending, canceling it
