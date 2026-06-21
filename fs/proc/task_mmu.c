@@ -23,6 +23,10 @@
 #include <asm/tlbflush.h>
 #include "internal.h"
 
+#ifdef CONFIG_KSU_SUSFS_SUS_MAP
+#include <linux/susfs_def.h>
+#endif
+
 void task_mem(struct seq_file *m, struct mm_struct *mm)
 {
 	unsigned long text, lib, swap, ptes, pmds, anon, file, shmem;
@@ -422,6 +426,20 @@ done:
 
 static int show_map(struct seq_file *m, void *v, int is_pid)
 {
+#ifdef CONFIG_KSU_SUSFS_SUS_MAP
+	struct vm_area_struct *sus_vma = v;
+
+	/* Skip the whole line for sus_map-flagged file mappings so the
+	 * injected library never appears in /proc/<pid>/[maps|tid maps].
+	 * The macro self-gates to umounted user apps (uid >= 10000). We still
+	 * cache the vma so seq_file iteration advances correctly.
+	 */
+	if (sus_vma->vm_file &&
+	    SUSFS_IS_INODE_SUS_MAP(file_inode(sus_vma->vm_file))) {
+		m_cache_vma(m, v);
+		return 0;
+	}
+#endif
 	show_map_vma(m, v, is_pid);
 	m_cache_vma(m, v);
 	return 0;
@@ -807,6 +825,18 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
 	int ret = 0;
 	bool rollup_mode;
 	bool last_vma;
+
+#ifdef CONFIG_KSU_SUSFS_SUS_MAP
+	/* Hide sus_map-flagged file mappings from /proc/<pid>/smaps. Only the
+	 * per-vma (non-rollup) view exposes the file path, so we skip there;
+	 * smaps_rollup is left intact to avoid corrupting its running totals.
+	 */
+	if (!priv->rollup && vma->vm_file &&
+	    SUSFS_IS_INODE_SUS_MAP(file_inode(vma->vm_file))) {
+		m_cache_vma(m, vma);
+		return 0;
+	}
+#endif
 
 	if (priv->rollup) {
 		rollup_mode = true;

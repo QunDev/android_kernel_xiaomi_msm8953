@@ -31,8 +31,15 @@ static inline u32 current_sid(void)
 }
 #endif
 
-#define KERNEL_SU_DOMAIN "ksu"
-#define KERNEL_SU_FILE "ksu_file"
+/* Detection-hiding: the SELinux domain/type names below are probed by name by
+ * root-detector "policy oracles" (android.os.SELinux.checkSELinuxAccess /
+ * isValidSELinuxContext over /sys/fs/selinux/{context,access}). The oracle can
+ * only TEST a name it supplies (it cannot enumerate the policy), so renaming
+ * the stock "ksu"/"ksu_file" identifiers to unguessable tokens defeats it.
+ * Everything (root-grant context, file type, default profile domain) derives
+ * from these two macros, so this is the only place the names need to change. */
+#define KERNEL_SU_DOMAIN "kthr9svc"
+#define KERNEL_SU_FILE "blkdiagd0"
 
 #define KERNEL_SU_CONTEXT "u:r:" KERNEL_SU_DOMAIN ":s0"
 #define KSU_FILE_CONTEXT "u:object_r:" KERNEL_SU_FILE ":s0"

@@ -5106,6 +5106,8 @@ CONFIG_KSU_SUSFS_ENABLE_LOG=y
 CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
 CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
 CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
-# SUS_MAP needs the structurally-divergent fs/proc/task_mmu.c maps-spoofing hunk
-# (donor base differs from this CAF 4.9 tree); left off — core hiding does not need it.
-# CONFIG_KSU_SUSFS_SUS_MAP is not set
+# SUS_MAP: hides mmapped real files (e.g. the LSPosed zygisk agent .so) from
+# /proc/<pid>/[maps|smaps|mem|map_files|pagemap]. The donor's task_mmu.c hunk did
+# not apply to this CAF 4.9 tree, so the maps/smaps skip is hand-ported here
+# (show_map/show_smap, guarded by CONFIG_KSU_SUSFS_SUS_MAP). base.c covers mem.
+CONFIG_KSU_SUSFS_SUS_MAP=y

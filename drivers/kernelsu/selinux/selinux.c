@@ -77,6 +77,13 @@ void setup_selinux(const char *domain, struct cred *cred)
 {
     if (transive_to_domain(domain, cred)) {
         pr_err("transive domain failed.\n");
+        /* Stability fallback: a stored app profile may reference a domain
+         * that no longer exists in the loaded policy — e.g. after the KSU
+         * domain identifier was renamed for detection-hiding, or a legacy
+         * "u:r:su:s0" entry. transive_to_domain() leaves cred untouched on
+         * failure, so re-apply the current KSU domain to keep root working. */
+        if (strcmp(domain, KERNEL_SU_CONTEXT) != 0)
+            transive_to_domain(KERNEL_SU_CONTEXT, cred);
         return;
     }
 }

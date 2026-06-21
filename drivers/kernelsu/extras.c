@@ -7,6 +7,7 @@
 #include "klog.h"
 #include "runtime/ksud.h"
 #include "infra/seccomp_cache.h"
+#include "selinux/selinux.h"
 
 // sorry for the ifdef hell
 // but im too lazy to fragment this out.
@@ -65,7 +66,10 @@ static const struct ksu_feature_handler avc_spoof_handler = {
 static int get_sid()
 {
 	// dont load at all if we cant get sids
-	int err = security_secctx_to_secid("u:r:su:s0", strlen("u:r:su:s0"), &su_sid);
+	// Use the (possibly renamed-for-hiding) KSU domain context, not the
+	// legacy hard-coded "u:r:su:s0" — granted root now runs in this domain.
+	int err = security_secctx_to_secid(KERNEL_SU_CONTEXT,
+					   strlen(KERNEL_SU_CONTEXT), &su_sid);
 	if (err) {
 		pr_info("avc_spoof/get_sid: su_sid not found!\n");
 		return -1;
